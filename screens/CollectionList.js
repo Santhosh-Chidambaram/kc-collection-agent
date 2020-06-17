@@ -48,6 +48,7 @@ export default function CollectionList() {
   //Auth context
   const authContext = useContext(AuthContext);
   const { token } = authContext;
+
   //Collection States
   const [collectionlist, setCollectionList] = useState("");
   const [count, setCount] = useState(0);
@@ -92,8 +93,15 @@ export default function CollectionList() {
       })
         .then((res) => res.json())
         .then((data) => {
+          
           setCollectionList(data.cc);
           setCount(data.ccount);
+          let total_amt = 0
+          data.cc.forEach(element => {
+            total_amt +=element.collected_amount
+            
+          });
+          setTotal(total_amt)
         });
     } catch (error) {
       showToast(error.message);
@@ -126,7 +134,7 @@ export default function CollectionList() {
               showToast("Already Submitted");
             } else {
               showToast("Collection Successfully Submitted !");
-              getTotalCollection();
+              
             }
           })
           .catch((error) => {
@@ -137,32 +145,29 @@ export default function CollectionList() {
       }
     }
 
-    //Getting Total Collection
-    async function getTotalCollection() {
-      try {
-        await fetch(url+"api/totalcollection", {
-          method: "GET",
-          headers: {
-            Accept: "application/json",
-            "Content-Type": "application/json",
-            Authorization: "Token " + token,
-          },
-        })
-          .then((res) => res.json())
-          .then((data) => {
-            setTotal(data["total_collection"]);
-          });
-      } catch (error) {
-        console.log(error);
-      }
-    }
+    // //Getting Total Collection
+    // async function getTotalCollection() {
+    //   try {
+    //     await fetch(url+"api/totalcollection", {
+    //       method: "GET",
+    //       headers: {
+    //         Accept: "application/json",
+    //         "Content-Type": "application/json",
+    //         Authorization: "Token " + token,
+    //       },
+    //     })
+    //       .then((res) => res.json())
+    //       .then((data) => {
+    //         setTotal(data["total_collection"]);
+    //       });
+    //   } catch (error) {
+    //     console.log(error);
+    //   }
+    // }
 
     //When Payment Collected and Refreshing
     if (refreshData) {
       getCollectedList();
-      setTimeout(() => {
-        getTotalCollection();
-      }, 2000);
 
     }
 

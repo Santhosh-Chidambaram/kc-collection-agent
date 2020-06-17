@@ -14,7 +14,8 @@ import {
   ToastAndroid,
   ActivityIndicator,
   Dimensions,
-  SafeAreaView
+  SafeAreaView,
+  Modal
 } from "react-native";
 import moment from "moment";
 import { AuthContext } from "./context";
@@ -67,6 +68,7 @@ function Home() {
   //State
   const [text, setText] = useState("");
   const [customer, setCustomer] = useState("");
+  const [fetching,setFetching] = useState(false)
 
   const authContext = useContext(AuthContext);
   const { token,isLoggedIn,setIsLoggedIn} = authContext;
@@ -100,16 +102,18 @@ function Home() {
       );
       let res = await response.json();
       if(response.ok){
+          setFetching(false)
           setCustomer(res)
-          console.log(customer)
           setText("");
       }
       else if(response.status == 404){
+        setFetching(false)
 
           showToast("Invalid STB Number")
           setText("")
 
       }else{
+        setFetching(false)
           showToast("No Response from the server !")
 
         }
@@ -117,6 +121,7 @@ function Home() {
 
       }
   catch (error) {
+    setFetching(false)
       showToast(error.message)
     }
 
@@ -175,13 +180,15 @@ function Home() {
             
             <TouchableOpacity style={styles.btn} onPress={() => {
               if(text){
+                console.log("Pressed")
+                setFetching(true)
                 setCustomer('')
                 getcd()
               }
               else{
                 showToast("Enter STB number then press submit!")
               }
-            }}>
+            }} disabled={fetching ? true : false}>
               <Text style={styles.btnText}>Submit</Text>
             </TouchableOpacity>
             
@@ -189,7 +196,16 @@ function Home() {
           </ErrorBoundary>
 
          
-          
+        {
+          fetching?
+          <View
+          style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
+        >
+          <ActivityIndicator size="large" color="red" />
+          <Text>Please wait...</Text>
+        </View>
+         
+          :
           <ErrorBoundary>
           
           { customer ? 
@@ -199,6 +215,9 @@ function Home() {
           
           :null}
           </ErrorBoundary>
+         
+        }
+          
           
           
 

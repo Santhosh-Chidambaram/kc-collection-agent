@@ -34,6 +34,7 @@ export default function Collect() {
   //State
   const [modalVisible, setModalVisible] = useState(false);
   const [sendPaymentUpdate,setSendPaymentUpdate] =useState(false)
+  const [showPhone,setShowPhone] = useState(false)
   const [cid,setCID] = useState("")
   const [cusdetail, SetCusDetail] = useState({
     cus_id: "",
@@ -41,6 +42,8 @@ export default function Collect() {
     payment_date: date,
     boxno: "",
     payment_amount: "",
+    setupbox:"",
+    phone:'0',
   });
 
   const [res,setRes] = useState({
@@ -48,48 +51,8 @@ export default function Collect() {
     collected_amount:''
 
   })
-
-  //Send payment of Customer to server
-  async function sendUpdate() {
-    try {
-      let response = await fetch(url+"api/customer/payment/update/" + cusdetail.cus_id, {
-        method: "PUT",
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-          Authorization: "Token " + token,
-        },
-        body: JSON.stringify({
-          payment_date: cusdetail.payment_date,
-          payment_status: cusdetail.payment_status,
-          customer: cusdetail.cus_id,
-          collected_amount: cusdetail.payment_amount
-        }),
-      });
-        
-        if(response.ok){
-            
-
-        }else if(response.status == 400){
-          showToast("Customer Does Not Exist,Please enter valid customer id")
-          SetCusDetail({
-            cus_id:'',
-            payment_amount:'',
-            payment_status:'paid',
-            payment_date:date
-          });
-        }
- 
-           
-  
-    } catch (error) {
-      showToast(error.message)
-
-    
-    }
-  }
-  //Send Collected To Server
-  async function sendCollected() {
+   //Send Collected To Server
+   async function sendCollected() {
     console.log(cid)
     try {
       let response = await fetch(url + "api/collectedcustomers", {
@@ -128,6 +91,78 @@ export default function Collect() {
     }
   }
 
+  //Send payment of Customer to server
+  async function sendUpdate() {
+    try {
+      let response;
+      {
+        showPhone && cusdetail.phone != null
+          ? (response = await fetch(url+"api/customer/payment/update/" + cusdetail.cus_id, {
+            method: "PUT",
+            headers: {
+              Accept: "application/json",
+              "Content-Type": "application/json",
+              Authorization: "Token " + token,
+            },
+            body: JSON.stringify({
+              payment_date: cusdetail.payment_date,
+              payment_status: cusdetail.payment_status,
+              customer: cusdetail.cus_id,
+              collected_amount: cusdetail.payment_amount,
+              stb:cusdetail.setupbox,
+              phone:cusdetail.phone,
+            }),
+          }))
+          : (response = await fetch(url+"api/customer/payment/update/" + cusdetail.cus_id, {
+            method: "PUT",
+            headers: {
+              Accept: "application/json",
+              "Content-Type": "application/json",
+              Authorization: "Token " + token,
+            },
+            body: JSON.stringify({
+              payment_date: cusdetail.payment_date,
+              payment_status: cusdetail.payment_status,
+              customer: cusdetail.cus_id,
+              collected_amount: cusdetail.payment_amount,
+              stb:cusdetail.setupbox,
+
+            }),
+          }))
+      }
+    
+      let res = await response.json()
+      console.log(res)  
+        if(response.ok){
+
+
+          setTimeout(() =>{
+            sendCollected()
+            SetCusDetail({
+              cus_id:'',
+              payment_amount:'',
+              payment_status:'paid',
+              payment_date:date,
+              phone:'0',
+            });
+          },2000)           
+
+        }else if(response.status == 400){
+          
+            showToast("Customer or STB Number Is Invalid")
+            
+
+        }
+ 
+           
+  
+    } catch (error) {
+      showToast(error.message)
+
+    
+    }
+  }
+ 
   useEffect(() => {
     async function getCollectorId(){
       try {
@@ -145,6 +180,9 @@ export default function Collect() {
             console.log(data["userid"]);
             
             setCID(data["userid"])
+            if(data["showPhoneField"]){
+              setShowPhone(data["showPhoneField"])
+            }
 
            });
         
@@ -158,21 +196,7 @@ export default function Collect() {
     
   if(sendPaymentUpdate){
     sendUpdate();
-    //Send Collected
-    setTimeout(() =>{
-      sendCollected()
-      SetCusDetail({
-        cus_id:'',
-        payment_amount:'',
-        payment_status:'paid',
-        payment_date:date
-      });
-      
-      
-
-    },2000)
-    
-        
+       
   }
 
     setTimeout(() =>{
@@ -192,7 +216,7 @@ export default function Collect() {
   const handleChange = (name, value) => {
     SetCusDetail({
       ...cusdetail,
-      [name]: value,
+      [name]: value.toUpperCase(),
     });
   };
  
@@ -218,9 +242,10 @@ export default function Collect() {
   };
   return (
     <KeyboardAvoidingView>
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <SafeAreaView style={styles.container}>
-        <ScrollView >
+      
+        <SafeAreaView >
+        <ScrollView contentContainerStyle={{height:'100%'}}>
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <View style={styles.container}>
             
            <ErrorBoundary>
@@ -228,7 +253,7 @@ export default function Collect() {
               <Text style={styles.label}>Customer Id:</Text>
               <TextInput
                 style={{
-                  height: 50,
+                  height: 45,
                   width: 200,
                   borderColor: "#F0057E",
                   borderWidth: 2,
@@ -243,10 +268,29 @@ export default function Collect() {
                 onChangeText={(txt) => handleChange("cus_id", txt)}
                 value={cusdetail.cus_id}
               />
+              <Text style={styles.label}>Setupbox No:</Text>
+              <TextInput
+                
+                style={{
+                  height: 45,
+                  width: 200,
+                  borderColor: "#F0057E",
+                  borderWidth: 2,
+                  borderRadius: 5,
+                  padding: 10,
+                  marginTop: 6,
+                  fontSize:18,
+                }}
+                placeholder="Setupbox No."
+                name="setupbox"
+                onChangeText={(txt) => handleChange("setupbox", txt)}
+                value={cusdetail.setupbox}
+              />
+              
               <Text style={styles.label}>Collected Amount:</Text>
               <TextInput
                 style={{
-                    height: 50,
+                    height: 45,
                     width: 200,
                     borderColor: "#F0057E",
                     borderWidth: 2,
@@ -261,10 +305,36 @@ export default function Collect() {
                 onChangeText={(txt) => handleChange("payment_amount", txt)}
                 value={cusdetail.payment_amount}
               />
+              {
+                showPhone?
+                <>
+                 <Text style={styles.label}>Phone:</Text>
+                  <TextInput
+                    keyboardType="numeric"
+                    style={{
+                      height: 45,
+                      width: 200,
+                      borderColor: "#F0057E",
+                      borderWidth: 2,
+                      borderRadius: 5,
+                      padding: 10,
+                      marginTop: 6,
+                      fontSize:18,
+                    }}
+                    placeholder="Phone No."
+                    name="phone"
+                    onChangeText={(txt) => SetCusDetail({...cusdetail,phone:txt})}
+                    value={cusdetail.phone}
+                  />
+                </>
+               
+                :
+                null
+              }
               <Text style={styles.label}>Payment Status:</Text>
               <TextInput
                 style={{
-                    height: 50,
+                    height: 45,
                     width: 200,
                     borderColor: "#F0057E",
                     borderWidth: 2,
@@ -281,7 +351,7 @@ export default function Collect() {
               <Text style={styles.label}>Payment Date:</Text>
               <TextInput
                 style={{
-                    height: 50,
+                    height: 45,
                     width: 200,
                     borderColor: "#F0057E",
                     borderWidth: 2,
@@ -336,15 +406,16 @@ export default function Collect() {
      
         </View> 
           </View>
+          </TouchableWithoutFeedback>
           </ScrollView>
           </SafeAreaView>
-      </TouchableWithoutFeedback>
+      
     </KeyboardAvoidingView>
   );
 }
 const styles = StyleSheet.create({
   container: {
-    paddingTop: 10,
+    paddingTop: 5,
     width: Dimensions.get("window").width, //for full screen
     height: "100%", //for full screen
     alignItems: "center",
@@ -354,8 +425,8 @@ const styles = StyleSheet.create({
     overflow: "scroll",
   },
   box: {
-    padding: 30,
-    width: "80%",
+    padding: 20,
+    width: "90%",
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 1,
@@ -371,7 +442,7 @@ const styles = StyleSheet.create({
     marginRight: 5,
     marginTop: 10,
     backgroundColor: "#fff",
-    marginBottom: 30,
+
   },
   label: {
     marginTop: 6,
@@ -391,8 +462,8 @@ const styles = StyleSheet.create({
   },
   btnCollect: {
     marginTop: 15,
-    width: 80,
-    height: 40,
+    width: 100,
+    height: 45,
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: "#00bf8f",
