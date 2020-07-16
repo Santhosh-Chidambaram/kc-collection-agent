@@ -26,7 +26,7 @@ const HomeStackScreen = () => (
   <HomeStack.Navigator
   screenOptions={{
     headerStyle: {
-      backgroundColor: '#FC5C7D',
+      backgroundColor: '#7f00ff',
       
     },
     headerTintColor: '#fff',
@@ -49,7 +49,7 @@ const CollectStackScreen = () => (
   <CollectStack.Navigator
   screenOptions={{
     headerStyle: {
-      backgroundColor: '#FC5C7D',
+      backgroundColor: '#7f00ff',
       
     },
     headerTintColor: '#fff',
@@ -70,7 +70,7 @@ const CollectListStackScreen = () => (
   <CollectListStack.Navigator
   screenOptions={{
     headerStyle: {
-      backgroundColor: '#FC5C7D',
+      backgroundColor: '#7f00ff',
      
     },
     headerTintColor: '#fff',
@@ -96,10 +96,10 @@ const TabsScreen = () => (
         fontSize: 12,
         fontWeight:'bold'
       },
-      activeTintColor:'#5D26C1',
+      activeTintColor:'#ef00ff',
       inactiveTintColor:'white',
       style: {
-        backgroundColor: "#FC5C7D",
+        backgroundColor: "#7f00ff",
       },
       keyboardHidesTabBar:true,
     }}
@@ -139,7 +139,6 @@ export default ({ navigation }) => {
 
   const [usertoken, setUserToken] = useState("");
   const [isLoggedIn,setIsLoggedIn] = useState(false)
- 
   const showInvalidToast = (res) => {
 
     ToastAndroid.showWithGravityAndOffset(
@@ -205,6 +204,7 @@ export default ({ navigation }) => {
         setToken:setUserToken,
         isLoggedIn:isLoggedIn,
         setIsLoggedIn:setIsLoggedIn,
+
       }}
     >
       <NavigationContainer>
@@ -214,7 +214,7 @@ export default ({ navigation }) => {
           <AuthStack.Navigator
           screenOptions={{
             headerStyle: {
-              backgroundColor: '#FC5C7D',
+              backgroundColor: '#7f00ff',
               
             },
             headerTintColor: '#fff',

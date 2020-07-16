@@ -102,7 +102,7 @@ useEffect(() =>{
       scrollEnabled={true}
     >
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <StatusBar backgroundColor='#FC5C7D'/>
+        <StatusBar backgroundColor='#7f00ff'/>
         <View style={styles.container}>
         <Image source={require('../assets/icon.png')} style={{ width: 130, height: 120 }}/>
           <View style={styles.card}>

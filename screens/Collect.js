@@ -40,7 +40,6 @@ export default function Collect() {
     cus_id: "",
     payment_status: "paid",
     payment_date: date,
-    boxno: "",
     payment_amount: "",
     setupbox:"",
     phone:'0',
@@ -51,52 +50,14 @@ export default function Collect() {
     collected_amount:''
 
   })
-   //Send Collected To Server
-   async function sendCollected() {
-    console.log(cid)
-    try {
-      let response = await fetch(url + "api/collectedcustomers", {
-        method: "POST",
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-          Authorization: "Token " + token,
-        },
-        body: JSON.stringify({
-          collected_amount: cusdetail.payment_amount,
-          customer: cusdetail.cus_id,
-          collector:cid,
-        }),
-      })
-      let data = await response.json()
-      if(response.ok){
-          setRes({
-            customer:data.customer,
-            collected_amount:data.collected_amount
-          })
-          setModalVisible(true)          
-      }
-      else if(response.status == 400){
-        showErrorToast()
 
-          
-      }else{
-        showToast("No reesponse from the server")
-      }
-       
-    } catch (error) {
-      showToast(error.message)
-
-      
-    }
-  }
 
   //Send payment of Customer to server
   async function sendUpdate() {
     try {
       let response;
       {
-        showPhone && cusdetail.phone != null
+        showPhone && cusdetail.phone != null && cusdetail.phone != '0'
           ? (response = await fetch(url+"api/customer/payment/update/" + cusdetail.cus_id, {
             method: "PUT",
             headers: {
@@ -105,12 +66,16 @@ export default function Collect() {
               Authorization: "Token " + token,
             },
             body: JSON.stringify({
-              payment_date: cusdetail.payment_date,
-              payment_status: cusdetail.payment_status,
               customer: cusdetail.cus_id,
+    
+              payment_date: moment().format(),
+              payment_status: cusdetail.payment_status,
+              
+    
               collected_amount: cusdetail.payment_amount,
-              stb:cusdetail.setupbox,
+              collection_agent:cid,
               phone:cusdetail.phone,
+              stb:cusdetail.setupbox.toUpperCase()
             }),
           }))
           : (response = await fetch(url+"api/customer/payment/update/" + cusdetail.cus_id, {
@@ -121,12 +86,16 @@ export default function Collect() {
               Authorization: "Token " + token,
             },
             body: JSON.stringify({
-              payment_date: cusdetail.payment_date,
-              payment_status: cusdetail.payment_status,
               customer: cusdetail.cus_id,
+    
+              payment_date: moment().format(),
+              payment_status: cusdetail.payment_status,
+              
+    
               collected_amount: cusdetail.payment_amount,
-              stb:cusdetail.setupbox,
-
+              collection_agent:cid,
+              
+              stb:cusdetail.setupbox.toUpperCase()
             }),
           }))
       }
@@ -134,30 +103,33 @@ export default function Collect() {
       let res = await response.json()
       console.log(res)  
         if(response.ok){
-
-
-          setTimeout(() =>{
-            sendCollected()
-            SetCusDetail({
-              cus_id:'',
-              payment_amount:'',
-              payment_status:'paid',
-              payment_date:date,
-              phone:'0',
-            });
-          },2000)           
+          setRes({
+            customer:res.customer,
+            collected_amount:res.collected_amount
+          })
+          setModalVisible(true) 
+          SetCusDetail({
+            cus_id:'',
+            payment_amount:'',
+            payment_status:'paid',
+            payment_date:date,
+            phone:'0',
+          });         
 
         }else if(response.status == 400){
           
-            showToast("Customer or STB Number Is Invalid")
+            showToast("Customer Payment Amount has already collected")
+
             
 
+        }else{
+            showToast("Please check the customerid or STB number")
         }
  
            
   
     } catch (error) {
-      showToast(error.message)
+      console.log(error.message)
 
     
     }
@@ -166,7 +138,7 @@ export default function Collect() {
   useEffect(() => {
     async function getCollectorId(){
       try {
-        await fetch(url + "api/getuserid",{
+       let response =  await fetch(url + "api/getuserid",{
           method: "GET",
           headers: {
             Accept: "application/json",
@@ -175,16 +147,18 @@ export default function Collect() {
           },
           
         })
-          .then((res) => res.json())
-          .then((data) => {
-            console.log(data["userid"]);
-            
-            setCID(data["userid"])
-            if(data["showPhoneField"]){
-              setShowPhone(data["showPhoneField"])
+         let res = await response.json()
+          if(response.ok) {
+           
+            console.log(res)
+            setCID(res.userid)
+            if(res.showPhoneField){
+              setShowPhone(res.showPhoneField)
             }
 
-           });
+           }else{
+             showErrorToast()
+           }
         
       } catch (error) {
         showToast(error)
@@ -198,16 +172,18 @@ export default function Collect() {
     sendUpdate();
        
   }
-
-    setTimeout(() =>{
-        setModalVisible(false)
-    },9000)
+    const tm = setTimeout(() =>{
+      setModalVisible(false)
+    },4000)
+    
       setSendPaymentUpdate(false)
     
       if(cid == ''){
         getCollectorId()
       }
-
+  return () =>{
+    clearTimeout(tm)
+  }
     
       
 
@@ -216,10 +192,10 @@ export default function Collect() {
   const handleChange = (name, value) => {
     SetCusDetail({
       ...cusdetail,
-      [name]: value.toUpperCase(),
+      [name]: value,
     });
   };
- 
+
   const showErrorToast = () => {
 
     ToastAndroid.showWithGravityAndOffset(
@@ -244,7 +220,10 @@ export default function Collect() {
     <KeyboardAvoidingView>
       
         <SafeAreaView >
-        <ScrollView contentContainerStyle={{height:'100%'}}>
+        <ScrollView contentContainerStyle={{
+          height:'100%',
+          backgroundColor:'white'
+        }}>
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <View style={styles.container}>
             
@@ -254,7 +233,7 @@ export default function Collect() {
               <TextInput
                 style={{
                   height: 45,
-                  width: 200,
+                  width: 250,
                   borderColor: "#F0057E",
                   borderWidth: 2,
                   borderRadius: 5,
@@ -273,7 +252,7 @@ export default function Collect() {
                 
                 style={{
                   height: 45,
-                  width: 200,
+                  width: 250,
                   borderColor: "#F0057E",
                   borderWidth: 2,
                   borderRadius: 5,
@@ -291,7 +270,7 @@ export default function Collect() {
               <TextInput
                 style={{
                     height: 45,
-                    width: 200,
+                    width: 250,
                     borderColor: "#F0057E",
                     borderWidth: 2,
                     borderRadius: 5,
@@ -313,7 +292,7 @@ export default function Collect() {
                     keyboardType="numeric"
                     style={{
                       height: 45,
-                      width: 200,
+                      width: 250,
                       borderColor: "#F0057E",
                       borderWidth: 2,
                       borderRadius: 5,
@@ -323,7 +302,7 @@ export default function Collect() {
                     }}
                     placeholder="Phone No."
                     name="phone"
-                    onChangeText={(txt) => SetCusDetail({...cusdetail,phone:txt})}
+                    onChangeText={(txt) => SetCusDetail({...cusdetail,phone:txt.toString()})}
                     value={cusdetail.phone}
                   />
                 </>
@@ -335,7 +314,7 @@ export default function Collect() {
               <TextInput
                 style={{
                     height: 45,
-                    width: 200,
+                    width: 250,
                     borderColor: "#F0057E",
                     borderWidth: 2,
                     borderRadius: 5,
@@ -352,7 +331,7 @@ export default function Collect() {
               <TextInput
                 style={{
                     height: 45,
-                    width: 200,
+                    width: 250,
                     borderColor: "#F0057E",
                     borderWidth: 2,
                     borderRadius: 5,

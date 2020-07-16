@@ -8,7 +8,8 @@ import {
   SafeAreaView,
   ActivityIndicator,
   ToastAndroid,
-  TouchableOpacity
+  TouchableOpacity,
+
 } from "react-native";
 import moment from "moment";
 import {url} from '../services/api/constants'
@@ -22,22 +23,29 @@ function wait(timeout) {
 }
 
 //Collectio List Render Item
-const RenderItem = ({ item }) => {
+const RenderItem = ({ item,index }) => {
   return (
       <View style={styles.clistContainer}>
-        <Text style={styles.itemname}>
-          CUSTOMER NAME :{"   "}
-          <Text style={styles.itemvalue}>{item.customer_name}</Text>
-        </Text>
-        <Text style={styles.itemname}>
-          STREET :{"   "}
-          <Text style={styles.itemvalue}>{item.street}</Text>
-        </Text>
-        <Text style={styles.itemname}>
-          COLLECTED AMOUNT :{"   "}
-          <Text style={styles.amt}>{item.collected_amount}</Text>
-        </Text>
-      </View>
+        <Text style={{position:'absolute',right:10,top:10}} >{moment(item.collected_date).format('LT')}</Text>
+         <View style={{
+           justifyContent:'center',
+           alignItems:'center',
+           backgroundColor:'#8e2de2',
+           height:60,
+           width:60,
+           borderRadius:50,
+           marginLeft:5,
+
+           
+           }}>
+           <Text style={{color:'white',fontSize:20,}}>{index+1}</Text>
+         </View>
+         <View style={{paddingLeft:25,paddingTop:15}}>
+         <Text style={styles.cusHead}>{item.customer}</Text>
+         <Text style={{color:'red',fontSize:20,paddingBottom:7}}>Rs.{item.collected_amount}/-</Text>
+         <Text style={styles.cusText}>{item.street}</Text>
+        </View>
+        </View>
   );
 };
 
@@ -83,7 +91,7 @@ export default function CollectionList() {
    //Getiing Customers List
    async function getCollectedList() {
     try {
-      await fetch(url+"api/collectedcustomers", {
+      await fetch(url+"api/collectedcustomers?agent=true&limit=70", {
         method: "GET",
         headers: {
           Accept: "application/json",
@@ -93,15 +101,20 @@ export default function CollectionList() {
       })
         .then((res) => res.json())
         .then((data) => {
-          
-          setCollectionList(data.cc);
-          setCount(data.ccount);
-          let total_amt = 0
-          data.cc.forEach(element => {
+          console.log(data[0])
+          if(data[0] != "No Records Found"){
+            setCollectionList(data);
+           setCount(data.length);
+           let total_amt = 0
+          data.forEach(element => {
             total_amt +=element.collected_amount
             
           });
           setTotal(total_amt)
+          }else{
+            showToast("No Records Found")
+          }
+          
         });
     } catch (error) {
       showToast(error.message);
@@ -120,26 +133,20 @@ export default function CollectionList() {
     //submiting Collection
     async function submitCollection() {
       try {
-        await fetch(url+"api/collectionreports/", {
+        let response = await fetch(url+"api/collectionreports/", {
           method: "POST",
           headers: {
             Accept: "application/json",
             "Content-Type": "application/json",
             Authorization: "Token " + token,
           },
-        })
-          .then((res) => res.json())
-          .then((data) => {
-            if (data == "Customers list empty") {
-              showToast("Already Submitted");
-            } else {
-              showToast("Collection Successfully Submitted !");
-              
-            }
-          })
-          .catch((error) => {
-            showToast(error.message)
-          });
+        });
+          let res = response.json()
+          if(response.ok){
+            showToast('Collection Submitted Successfully')
+          }else{
+            showToast("Collection Already Submitted")
+          }
       } catch (error) {
         showToast(error.message)
       }
@@ -188,25 +195,7 @@ export default function CollectionList() {
 
   //List Header
   const renderHeader = () => (
-    <View style={{
-      padding: 15,
-      width:Dimensions.get('window').width,
-      justifyContent: "center",
-      borderWidth: 1,
-      borderRadius: 20,
-      borderColor: "#ddd",
-      borderBottomWidth: 0,
-      shadowColor: "#000",
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.8,
-      shadowRadius: 2,
-      elevation: 3,
-      marginLeft: 1,
-      marginRight: 1,
-      marginTop: 5,
-      marginBottom: 5,
-      backgroundColor: "#fff",
-    }}>
+    <View style={styles.headerL}>
       <View style={styles.header}>
         <Text style={styles.count}>
           Collected : <Text style={styles.countValue}>{count}</Text>
@@ -257,7 +246,7 @@ export default function CollectionList() {
 
   return (
     <View style={styles.container}>
-      {isLoading ? (
+      {isLoading  ? (
         <View
           style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
         >
@@ -272,9 +261,10 @@ export default function CollectionList() {
           data={collectionlist}
           renderItem={RenderItem}
           ListHeaderComponent={renderHeader}
-          keyExtractor={(item) => item.id.toString()}
+          keyExtractor={(item,index) => item.id != null ?(item.id).toString():null}
           nestedScrollEnabled={false}
           removeClippedSubviews={true}
+          
           ListFooterComponent={
             <View style={{ height: 0, marginBottom: 20 }}></View>
           }
@@ -297,6 +287,26 @@ const styles = StyleSheet.create({
     height: "100%",
     
   },
+  headerL:{
+    padding: 15,
+    width:Dimensions.get('window').width,
+    justifyContent: "space-around",
+    borderWidth: 1,
+    borderRadius: 20,
+    borderColor: "#ddd",
+    borderBottomWidth: 0,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.8,
+    shadowRadius: 2,
+    elevation: 3,
+    marginLeft: 1,
+    marginRight: 1,
+    marginTop: 5,
+    marginBottom: 5,
+    backgroundColor: "#fff",
+
+  },
   clist: {
     marginTop: 20,
     fontSize: 25,
@@ -305,8 +315,10 @@ const styles = StyleSheet.create({
     textDecorationStyle: "solid",
   },
   clistContainer: {
-    padding: 13,
-    justifyContent: "center",
+    flexDirection:'row',
+    padding: 10,
+    justifyContent: 'flex-start',
+    alignItems:'center',
     borderWidth: 1,
     borderRadius: 20,
     borderColor: "#ddd",
@@ -330,6 +342,7 @@ const styles = StyleSheet.create({
     fontSize: 22,
     color: "black",
     fontWeight: "bold",
+    paddingRight:20,
   },
   date: {
     fontSize: 22,
@@ -339,7 +352,7 @@ const styles = StyleSheet.create({
   header: {
     marginTop: 10,
     flexDirection: "row",
-    justifyContent: "space-evenly",
+    justifyContent: "space-around",
     marginBottom: 10,
   },
   countValue: {
@@ -361,5 +374,19 @@ const styles = StyleSheet.create({
     fontSize: 19,
     color: "red",
     fontWeight: "bold",
+  },
+  cusHead: {
+    color: "#8e2de2",
+    fontSize: 20,
+    fontWeight: "bold",
+    width: 240,
+    paddingBottom:7
+  },
+  cusText: {
+    fontSize: 20,
+    color:'black',
+    width:300,
+    paddingBottom:1
+    
   },
 });

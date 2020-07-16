@@ -22,6 +22,8 @@ import { AuthContext } from "./context";
 import ErrorBoundary from 'react-native-error-boundary'
 import {url} from '../services/api/constants'
 import Icon from  'react-native-vector-icons/AntDesign'
+import FIcon from 'react-native-vector-icons/FontAwesome'
+import AsyncStorage from '@react-native-community/async-storage'
 
 //Customer Item
 function CustomerItem({ item,setCustomer }) {
@@ -45,7 +47,7 @@ function CustomerItem({ item,setCustomer }) {
       <Text style={styles.itemname}>CUSTOMER NAME :{"   "}
       <Text style={styles.itemvalue}>{item.name}</Text></Text> 
       <Text style={styles.itemname}>STB NO :{"   "}
-      <Text style={styles.itemvalue}>{item.setupbox.boxno}</Text></Text> 
+      <Text style={styles.itemvalue}>{item.stbno}</Text></Text> 
       <Text style={styles.itemname}>STREET :{"   "} 
       <Text style={styles.itemvalue}>{item.street}</Text></Text> 
       <Text style={styles.itemname}>PAYMENT STATUS:{"   "} 
@@ -67,13 +69,35 @@ function Home() {
   
   //State
   const [text, setText] = useState("");
+  const [customersList,setCustomersList] = useState('')
   const [customer, setCustomer] = useState("");
   const [fetching,setFetching] = useState(false)
 
   const authContext = useContext(AuthContext);
   const { token,isLoggedIn,setIsLoggedIn} = authContext;
+  
+  const _storeData = async(res) =>{
+    try {
+        
+        await AsyncStorage.setItem('customers',JSON.stringify(res))
+        console.log("Customers Data Saved successfully")
+    } catch (error) {
+        console.log(error)
+    }
+  }
+  
+  const _retreiveData = async() =>{
+    let value = await AsyncStorage.getItem('customers')
+    if(value != null){
 
+        setCustomersList(JSON.parse(value))
+        
+        console.log("Customers Data retreived")
+    }else{
+        getcustomers()
 
+    }
+  }
   //Toast
   const showToast = (res) =>{
     ToastAndroid.showWithGravityAndOffset(
@@ -87,10 +111,10 @@ function Home() {
   
   //Getting Customer Details
 
-  async function getcd() {
+  async function getcustomers() {
     try {
       let response = await fetch(
-        url+"api/customer-details/"+text,
+        url+"api/customers",
         {
           method: "GET",
           headers: {
@@ -102,14 +126,15 @@ function Home() {
       );
       let res = await response.json();
       if(response.ok){
+          _storeData(res)
           setFetching(false)
-          setCustomer(res)
+          setCustomersList(res)
           setText("");
       }
       else if(response.status == 404){
-        setFetching(false)
+          setFetching(false)
 
-          showToast("Invalid STB Number")
+          showToast(JSON.stringify(res))
           setText("")
 
       }else{
@@ -127,19 +152,44 @@ function Home() {
 
   }
   
+  function getcd(){
+    
+    var resData = customersList.filter(cus =>{
+      return cus.stbno.includes(text.toUpperCase())
+    })
+    
+    if(resData != ''){
+      setFetching(false)
+      setText('')
+      setCustomer(resData)
+    }else{
+      setFetching(false)
+      showToast("Enter a valid STB Number")
+
+    }
+    
+  }
 
   useEffect(() =>{
     
    if(isLoggedIn){
      showToast("Succesfully Logged In")
-     setTimeout(() =>{
-    
-      setIsLoggedIn(false)
-    },3000)
+     
 
    }
+
+   if(customersList === ''){
+      _retreiveData()
+   }
    
+
+   const tm = setTimeout(() =>{
+    setIsLoggedIn(false)
+  },3000)
   
+  return () => {
+    clearTimeout(tm)
+  }
   
 
   },[])
@@ -150,12 +200,20 @@ function Home() {
   <SafeAreaView style={styles.container}>
   <ScrollView style={{height:'100%'}}>    
     <KeyboardAvoidingView>
-      <StatusBar backgroundColor="#FC5C7D"/>
+      <StatusBar backgroundColor="#7f00ff"/>
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
 
         <View style={styles.container}>
         <ErrorBoundary>
           <View style={styles.box}>
+            <TouchableOpacity 
+            style={{zIndex:1,position:'absolute',right:15,top:10}}
+            onPress={() => {
+              setFetching(true)
+              getcustomers()}}
+            disabled={fetching}>
+              <FIcon name="refresh" size={30} color="red"/>
+            </TouchableOpacity>
           
             <Text style={styles.label}>ENTER STB NUMBER :</Text>
             <TextInput
@@ -180,7 +238,6 @@ function Home() {
             
             <TouchableOpacity style={styles.btn} onPress={() => {
               if(text){
-                console.log("Pressed")
                 setFetching(true)
                 setCustomer('')
                 getcd()
@@ -247,7 +304,7 @@ const styles = StyleSheet.create({
   box: {
 
     padding: 30,
-    width: "80%",
+    width: "95%",
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 1,
@@ -261,12 +318,13 @@ const styles = StyleSheet.create({
     elevation: 10,
     marginLeft: 5,
     marginRight: 5,
-    marginTop: 25,
+    marginTop: 15,
     backgroundColor: "#fff",
     marginBottom: 20,
   },
   item: {
     padding: 20,
+    width: "95%",
     height:"auto",
     borderWidth: 1,
     borderRadius: 20,
